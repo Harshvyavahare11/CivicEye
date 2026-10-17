@@ -70,10 +70,12 @@ public class TwilioMessagingProvider implements MessagingProvider {
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
 
         try {
+            @SuppressWarnings("rawtypes")
             ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                String sid = (String) response.getBody().get("sid");
-                String status = (String) response.getBody().get("status");
+                Map<?, ?> body = response.getBody();
+                String sid = (String) body.get("sid");
+                String status = (String) body.get("status");
                 log.info("Twilio dispatched SMS to {} with SID: {} (status: {})", toPhone, sid, status);
                 return MessageSendResult.success(sid, getProviderName(), "delivered".equalsIgnoreCase(status), false, textContent);
             }

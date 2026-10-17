@@ -63,6 +63,7 @@ public class WhatsAppMessagingProvider implements MessagingProvider {
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
 
         try {
+            @SuppressWarnings("rawtypes")
             ResponseEntity<Map> response = restTemplate.postForEntity(url, request, Map.class);
             if (response.getStatusCode().is2xxSuccessful()) {
                 log.info("WhatsApp message dispatched successfully to {}", cleanPhone);

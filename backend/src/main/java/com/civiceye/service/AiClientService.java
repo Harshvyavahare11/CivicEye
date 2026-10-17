@@ -10,7 +10,6 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,9 +40,10 @@ public class AiClientService {
     public AiHealthResponse checkAiHealth() {
         String url = aiEngineBaseUrl + "/health";
         try {
+            @SuppressWarnings("rawtypes")
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                Map body = response.getBody();
+                Map<?, ?> body = response.getBody();
                 boolean keyConfigured = Boolean.TRUE.equals(body.get("gemma_api_key_configured"));
                 String model = (String) body.get("model");
                 return AiHealthResponse.connected(keyConfigured, model);
