@@ -11,7 +11,7 @@ from app.validators import validate_image_file
 from app.gemma_service import GemmaService
 
 # Load environment variables from .env
-load_dotenv()
+load_dotenv(override=True)
 
 logging.basicConfig(
     level=logging.INFO,

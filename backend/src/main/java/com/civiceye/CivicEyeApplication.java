@@ -53,8 +53,8 @@ public class CivicEyeApplication {
     @Bean
     public RestTemplate restTemplate(RestTemplateBuilder builder) {
         return builder
-                .setConnectTimeout(Duration.ofSeconds(10))
-                .setReadTimeout(Duration.ofSeconds(45))
+                .setConnectTimeout(Duration.ofSeconds(15))
+                .setReadTimeout(Duration.ofSeconds(90))
                 .build();
     }
 }

@@ -49,10 +49,11 @@ class GemmaService:
         self.demo_default = os.getenv("DEMO_MODE_DEFAULT", "false").lower() == "true"
 
     def is_api_key_configured(self) -> bool:
-        return bool(self.api_key and not self.api_key.startswith("your_"))
+        key = os.getenv("GEMMA_API_KEY", self.api_key).strip()
+        return bool(key and not key.startswith("your_"))
 
     def get_model_name(self) -> str:
-        return self.model
+        return os.getenv("GEMMA_MODEL", self.model).strip()
 
     def generate_demo_response(
         self,
@@ -177,7 +178,11 @@ class GemmaService:
                 "or enable Demo Mode in the web interface to test with simulated responses."
             )
 
-        # Prepare user prompt with context
+        # Refresh settings in case .env was updated
+        self.api_key = os.getenv("GEMMA_API_KEY", self.api_key).strip()
+        self.model = os.getenv("GEMMA_MODEL", self.model).strip()
+
+        # Prepare prompt combining system instruction, context, and schema for Gemma
         context_parts = []
         if description and description.strip():
             context_parts.append(f"Citizen provided description: {description.strip()}")
@@ -185,21 +190,21 @@ class GemmaService:
             context_parts.append(f"Citizen confirmed location: {location.strip()}")
         
         user_prompt_text = (
-            "Analyze this civic issue photograph.\n"
+            SYSTEM_INSTRUCTION
+            + "\n\n--- CITIZEN REPORT CONTEXT ---\n"
             + ("\n".join(context_parts) if context_parts else "No additional text description was provided.")
-            + "\n\n"
+            + "\n\n--- REQUIRED JSON SCHEMA ---\n"
             + JSON_SCHEMA_DESCRIPTION
+            + "\n\nCRITICAL: Respond ONLY with a valid JSON object matching the schema above. Start your response with { and end with }."
         )
 
         image_b64 = base64.b64encode(image_bytes).decode("utf-8")
 
-        # Call Google GenAI REST API endpoint
+        # Call Google GenAI REST API endpoint for Gemma
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
         
+        # Note: Gemma models on Google Generative Language API require instructions inside contents
         payload = {
-            "system_instruction": {
-                "parts": [{"text": SYSTEM_INSTRUCTION}]
-            },
             "contents": [
                 {
                     "parts": [
@@ -216,16 +221,15 @@ class GemmaService:
                 }
             ],
             "generationConfig": {
-                "temperature": 0.2,
-                "response_mime_type": "application/json"
+                "temperature": 0.2
             }
         }
 
-        async with httpx.AsyncClient(timeout=45.0) as client:
+        async with httpx.AsyncClient(timeout=90.0) as client:
             try:
                 response = await client.post(url, json=payload)
             except httpx.TimeoutException:
-                raise TimeoutError("Hosted Gemma 4 API timed out after 45 seconds.")
+                raise TimeoutError("Hosted Gemma 4 API timed out after 90 seconds.")
             except Exception as e:
                 logger.error(f"Network error calling Gemma API: {str(e)}")
                 raise ConnectionError(f"Could not connect to Gemma 4 API: {str(e)}")
@@ -251,17 +255,24 @@ class GemmaService:
             if not candidates:
                 raise ValueError("Gemma API returned no candidates.")
             
-            raw_text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+            parts = candidates[0].get("content", {}).get("parts", [])
+            raw_text = "\n".join([p.get("text", "") for p in parts if "text" in p]).strip()
             if not raw_text:
                 raise ValueError("Gemma API returned empty text content.")
 
-            # Clean markdown codeblocks if model included them
-            clean_text = raw_text.strip()
-            if clean_text.startswith("```"):
-                clean_text = re.sub(r"^```[a-zA-Z]*\n", "", clean_text)
-                clean_text = re.sub(r"\n```$", "", clean_text)
+            # Clean markdown code blocks if any
+            clean_text = raw_text
+            if "```" in clean_text:
+                clean_text = re.sub(r"```[a-zA-Z]*\n?", "", clean_text)
+                clean_text = clean_text.replace("```", "")
 
-            parsed_data = json.loads(clean_text)
+            # Locate the first '{' and decode using JSONDecoder to avoid trailing commentary issues
+            start_idx = clean_text.find("{")
+            if start_idx != -1:
+                decoder = json.JSONDecoder()
+                parsed_data, _ = decoder.raw_decode(clean_text[start_idx:])
+            else:
+                parsed_data = json.loads(clean_text)
         except Exception as parse_err:
             logger.error(f"Failed to parse Gemma output: {str(parse_err)}. Raw text: {raw_text[:200]}")
             raise ValueError(f"Model response was not valid structured JSON: {str(parse_err)}")
