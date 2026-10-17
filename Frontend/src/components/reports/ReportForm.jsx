@@ -10,7 +10,7 @@ export function ReportForm({ onAnalyze, isAnalyzing, error, onRetry, defaultDemo
   const [location, setLocation] = useState('');
   const [latitude, setLatitude] = useState(18.5204);
   const [longitude, setLongitude] = useState(73.8567);
-  const [recipientPhone, setRecipientPhone] = useState('+15551234567');
+  const [recipientPhone, setRecipientPhone] = useState('+917058207967');
   const [demoMode, setDemoMode] = useState(defaultDemoMode);
   const [validationError, setValidationError] = useState(null);
 
@@ -257,7 +257,7 @@ export function ReportForm({ onAnalyze, isAnalyzing, error, onRetry, defaultDemo
       {/* 4. Recipient Phone Contact */}
       <div className="form-group">
         <label className="form-label" htmlFor="recipient-phone">
-          Test Recipient Phone (SMS / WhatsApp Dispatch)
+          🏛️ Verified Government / Municipal Department Contact (SMS Dispatch)
         </label>
         <input
           id="recipient-phone"
@@ -265,10 +265,10 @@ export function ReportForm({ onAnalyze, isAnalyzing, error, onRetry, defaultDemo
           className="form-input"
           value={recipientPhone}
           onChange={(e) => setRecipientPhone(e.target.value)}
-          placeholder="+15551234567 or +919876543210"
+          placeholder="+917058207967 or verified municipal contact"
         />
-        <div className="form-help">
-          For prototype demonstration, complaints will be dispatched to this test recipient number.
+        <div className="form-help" style={{ fontSize: '0.8rem', color: '#b45309', marginTop: '0.35rem' }}>
+          ℹ️ <strong>Important:</strong> This sends an SMS from your authorized Twilio sender. It does not automatically register an official government complaint. The department must agree to receive and process complaints through that channel.
         </div>
       </div>
 

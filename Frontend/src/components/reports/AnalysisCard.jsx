@@ -9,7 +9,7 @@ export function AnalysisCard({
   initialLocation,
   initialDescription,
   imagePreviewUrl,
-  initialRecipientPhone = '+15551234567',
+  initialRecipientPhone = '+917058207967',
   latitude,
   longitude
 }) {
@@ -182,14 +182,19 @@ export function AnalysisCard({
         </div>
 
         <div className="form-group" style={{ marginTop: '1rem' }}>
-          <label className="form-label" style={{ fontSize: '0.8125rem' }}>Dispatch Recipient Phone (SMS / WhatsApp)</label>
+          <label className="form-label" style={{ fontSize: '0.8125rem' }}>
+            🏛️ Verified Government / Municipal Department Contact (SMS Dispatch)
+          </label>
           <input
             type="text"
             className="form-input"
             value={recipientPhone}
             onChange={(e) => setRecipientPhone(e.target.value)}
-            placeholder="+15551234567"
+            placeholder="+917058207967"
           />
+          <div className="form-help" style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: 'var(--text-secondary)' }}>
+            To = verified government/municipal department number. From = authorized Twilio sender (+17372508034).
+          </div>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem' }}>
@@ -208,7 +213,7 @@ export function AnalysisCard({
             onClick={() => setShowSendModal(true)}
             disabled={isSaving || !complaintText.trim()}
           >
-            🚀 Send Complaint via WhatsApp / SMS
+            🚀 Send Complaint via Twilio SMS
           </button>
         </div>
       </div>
@@ -218,25 +223,27 @@ export function AnalysisCard({
         <div className="modal-backdrop">
           <div className="modal-card">
             <h3 style={{ fontSize: '1.25rem', marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
-              Confirm Outgoing Complaint Dispatch
+              A. Sending Complaint to Government Department
             </h3>
             <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-              CivicEye will dispatch this grievance to your configured recipient via the active messaging adapter.
+              CivicEye will dispatch this grievance notice to the department via your authorized Twilio SMS sender.
             </p>
 
             <div style={{ backgroundColor: 'var(--bg-main)', padding: '0.875rem', borderRadius: 'var(--radius-sm)', marginBottom: '1rem', fontSize: '0.875rem' }}>
-              <div><strong>Recipient Number:</strong> <code>{recipientPhone}</code></div>
+              <div><strong>To (Verified Department Contact):</strong> <code>{recipientPhone}</code></div>
+              <div><strong>From (Authorized Twilio Sender):</strong> <code>+17372508034</code></div>
               <div><strong>Assigned Department:</strong> {analysis.suggestedDepartment || 'Public Works'}</div>
+              <div><strong>Location:</strong> {location || 'Pinned Coordinates'}</div>
               <div style={{ marginTop: '0.5rem' }}>
-                <strong>Message Content:</strong>
+                <strong>Body (Complaint Summary & Tracking ID):</strong>
                 <blockquote style={{ fontStyle: 'italic', margin: '0.25rem 0 0', borderLeft: '3px solid var(--teal-500)', paddingLeft: '0.5rem', color: 'var(--text-secondary)' }}>
                   "{complaintText}"
                 </blockquote>
               </div>
             </div>
 
-            <div style={{ fontSize: '0.75rem', color: '#b45309', backgroundColor: '#fef3c7', padding: '0.65rem', borderRadius: '4px', marginBottom: '1.25rem' }}>
-              ⚠️ <strong>Civic Disclaimer:</strong> Dispatching an SMS or WhatsApp notification does not represent an official municipal acknowledgment until formally accepted by authorities.
+            <div style={{ fontSize: '0.8rem', color: '#b45309', backgroundColor: '#fef3c7', padding: '0.75rem', borderRadius: '6px', marginBottom: '1.25rem', border: '1px solid #fde68a' }}>
+              ⚠️ <strong>Important Notice:</strong> This sends an SMS; it does not automatically register an official government complaint. The department must agree to receive and process complaints through that channel.
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>

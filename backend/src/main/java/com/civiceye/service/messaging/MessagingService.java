@@ -207,9 +207,9 @@ public class MessagingService {
 
     public String formatComplaintMessage(Report report) {
         StringBuilder sb = new StringBuilder();
-        sb.append("📢 [CivicEye Grievance: ").append(report.getId()).append("]\n");
-        sb.append("Title: ").append(report.getTitle()).append("\n");
-        sb.append("Category: ").append(report.getCategory()).append(" | Severity: ").append(report.getSeverity()).append("\n");
+        sb.append("📢 [CivicEye Grievance Notice]\n");
+        sb.append("Tracking ID: ").append(report.getId()).append("\n");
+        sb.append("Summary: ").append(report.getTitle()).append(" (").append(report.getCategory()).append(")\n");
         sb.append("Location: ").append(report.getLocation() != null ? report.getLocation() : "Unspecified");
 
         if (report.getLatitude() != null && report.getLongitude() != null) {
@@ -221,12 +221,12 @@ public class MessagingService {
             sb.append("Assigned Authority: ").append(report.getSuggestedDepartment()).append("\n");
         }
 
-        sb.append("\nComplaint Draft:\n\"").append(report.getComplaintText()).append("\"\n\n");
-        sb.append("Supported Reply Actions:\n");
+        sb.append("\nComplaint Details:\n\"").append(report.getComplaintText()).append("\"\n\n");
+        sb.append("Reply Actions:\n");
         sb.append("• STATUS ").append(report.getId()).append(" : Check tracking status\n");
         sb.append("• FIXED ").append(report.getId()).append(" : Confirm issue is resolved\n");
-        sb.append("• NOT_FIXED ").append(report.getId()).append(" : Escalate unresolved grievance\n");
-        sb.append("• HELP : View reply commands");
+        sb.append("• NOT_FIXED ").append(report.getId()).append(" : Escalate unresolved grievance\n\n");
+        sb.append("Important: This sends an SMS notification; it does not automatically register an official government complaint. The department must agree to receive and process complaints through that channel.");
         return sb.toString();
     }
 
