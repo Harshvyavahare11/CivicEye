@@ -23,8 +23,7 @@ class ReportControllerTest {
         mockMvc.perform(get("/api/reports"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$.length()").value(org.hamcrest.Matchers.greaterThanOrEqualTo(2)));
+                .andExpect(jsonPath("$.content").isArray());
     }
 
     @Test
@@ -66,12 +65,10 @@ class ReportControllerTest {
         String jsonPayload = """
                 {
                     "title": "Broken street lamp near school",
-                    "category": "Streetlight",
+                    "category": "OTHER",
                     "description": "Flickering and burnt out lamp",
-                    "location": "Near City High School Gate",
-                    "complaintText": "Streetlight near the school gate is completely dark. Please repair.",
-                    "severity": "Medium",
-                    "status": "Ready for Submission"
+                    "locationText": "Near City High School Gate",
+                    "severity": "MEDIUM"
                 }
                 """;
 
@@ -80,8 +77,9 @@ class ReportControllerTest {
                         .content(jsonPayload))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNotEmpty())
+                .andExpect(jsonPath("$.reportNumber").isNotEmpty())
                 .andExpect(jsonPath("$.title").value("Broken street lamp near school"))
-                .andExpect(jsonPath("$.category").value("Streetlight"));
+                .andExpect(jsonPath("$.category").value("OTHER"));
     }
 
     @Test
