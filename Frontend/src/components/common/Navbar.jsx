@@ -28,6 +28,11 @@ export function Navbar({ backendHealth, aiHealth }) {
               </Link>
             </li>
             <li>
+              <Link to="/track" className={`nav-link ${isActive('/track') || location.pathname.startsWith('/track') ? 'active' : ''}`}>
+                Track Issue
+              </Link>
+            </li>
+            <li>
               <Link to="/reports" className={`nav-link ${isActive('/reports') ? 'active' : ''}`}>
                 My Reports
               </Link>

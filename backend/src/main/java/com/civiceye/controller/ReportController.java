@@ -85,6 +85,19 @@ public class ReportController {
     }
 
     /**
+     * Sends the approved civic complaint to the configured recipient via WhatsApp or SMS.
+     */
+    @PostMapping("/{id}/send")
+    public ResponseEntity<com.civiceye.dto.SendComplaintResponse> sendComplaint(
+            @PathVariable("id") String id,
+            @RequestBody(required = false) com.civiceye.dto.SendComplaintRequest request
+    ) {
+        String recipientPhone = (request != null) ? request.recipientPhone() : null;
+        com.civiceye.dto.SendComplaintResponse response = reportService.sendComplaint(id, recipientPhone);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * Deletes a report by ID.
      */
     @DeleteMapping("/{id}")

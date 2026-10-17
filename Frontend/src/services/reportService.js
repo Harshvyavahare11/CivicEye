@@ -44,11 +44,27 @@ export async function getReportStats() {
   return request('/api/reports/stats');
 }
 
+export async function sendComplaint(id, recipientPhone, customNote) {
+  return request(`/api/reports/${id}/send`, {
+    method: 'POST',
+    body: JSON.stringify({ recipientPhone, customNote })
+  });
+}
+
+export async function simulateWebhook(from, body, reportId) {
+  return request('/api/webhooks/messaging/simulate', {
+    method: 'POST',
+    body: JSON.stringify({ from, body, reportId })
+  });
+}
+
 export default {
   getReports,
   getReportById,
   createReport,
   updateReport,
   deleteReport,
-  getReportStats
+  getReportStats,
+  sendComplaint,
+  simulateWebhook
 };

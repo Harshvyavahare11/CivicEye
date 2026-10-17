@@ -12,6 +12,8 @@ public record CreateReportRequest(
 
         String description,
         String location,
+        Double latitude,
+        Double longitude,
 
         @NotBlank(message = "Complaint text is required")
         String complaintText,
@@ -23,6 +25,7 @@ public record CreateReportRequest(
         List<String> uncertainties,
         List<String> recommendedActions,
         String status,
+        String recipientPhone,
         boolean demoMode,
         String imageUrl
 ) {}

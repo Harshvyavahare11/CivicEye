@@ -1,0 +1,19 @@
+package com.civiceye.service.messaging;
+
+public record MessageSendResult(
+        boolean success,
+        String providerMessageId,
+        String providerName,
+        boolean isDelivered,
+        boolean isSimulated,
+        String messageBody,
+        String errorMessage
+) {
+    public static MessageSendResult success(String providerMessageId, String providerName, boolean isDelivered, boolean isSimulated, String messageBody) {
+        return new MessageSendResult(true, providerMessageId, providerName, isDelivered, isSimulated, messageBody, null);
+    }
+
+    public static MessageSendResult failure(String providerName, String messageBody, String errorMessage) {
+        return new MessageSendResult(false, null, providerName, false, false, messageBody, errorMessage);
+    }
+}

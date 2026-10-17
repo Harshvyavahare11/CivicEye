@@ -37,7 +37,11 @@ public class InMemoryReportRepository implements ReportRepository {
         report1.setObservations(List.of("Cracked bituminous layer with exposed stone ballast", "Water accumulation inside the depression"));
         report1.setUncertainties(List.of("Actual depth measurement cannot be verified from 2D photograph alone"));
         report1.setRecommendedActions(List.of("Place temporary warning cones and deploy road patch crew"));
-        report1.setStatus("Submitted");
+        report1.setStatus("Sent");
+        report1.setCommunicationStatus("Sent");
+        report1.setRecipientPhone("+15551234567");
+        report1.setProviderMessageId("MOCK-MSG-INIT1");
+        report1.setNextFollowUpAt(Instant.now().plus(2, ChronoUnit.MINUTES));
         report1.setDemoMode(true);
         report1.setCreatedAt(Instant.now().minus(2, ChronoUnit.DAYS));
         report1.setUpdatedAt(Instant.now().minus(1, ChronoUnit.DAYS));
@@ -57,6 +61,8 @@ public class InMemoryReportRepository implements ReportRepository {
         report2.setUncertainties(List.of("Duration of uncollected waste"));
         report2.setRecommendedActions(List.of("Dispatch waste compactor vehicle"));
         report2.setStatus("Ready for Submission");
+        report2.setCommunicationStatus("Draft");
+        report2.setRecipientPhone("+15551234567");
         report2.setDemoMode(true);
         report2.setCreatedAt(Instant.now().minus(6, ChronoUnit.HOURS));
         report2.setUpdatedAt(Instant.now().minus(6, ChronoUnit.HOURS));

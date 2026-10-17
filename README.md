@@ -1,10 +1,14 @@
-# CivicEye — AI-Powered Civic Issue Reporting Platform (V1)
+# CivicEye — AI-Powered Civic Issue Reporting & Follow-Up Platform (V1)
 
 CivicEye empowers citizens to photograph, analyze, and report visible civic infrastructure problems (such as potholes, open drains, garbage dumps, broken streetlights, and waterlogging) using computer vision and hosted **Google Gemma 4 AI**.
 
-The application automatically categorizes issues, assesses preliminary severity, determines jurisdiction, recommends next steps, and drafts a clear, respectful grievance letter ready for citizen review and submission.
-
-> **Important V1 Scope Disclaimer**: CivicEye V1 prepares, organizes, and manages civic complaints locally. It does not automatically submit complaints to government or municipal portals unless an authorized municipal API gateway is integrated.
+The platform provides an end-to-end civic accountability loop:
+1. **Interactive Reporting**: Photo upload + device camera capture with interactive Leaflet / OpenStreetMap GPS pin-drop and Nominatim reverse geocoding.
+2. **Gemma 4 AI Analysis**: Categorizes issues, assesses preliminary severity with physical rationale, identifies jurisdictional department, and drafts verified complaint text.
+3. **Complaint Messaging Adapter**: Dispatches grievance notifications to test or municipal contacts via Twilio SMS, WhatsApp Business Cloud API, or local development simulation.
+4. **Dedicated Tracking**: Real-time lifecycle vs communication status, delivery receipts, and follow-up schedules.
+5. **Backend Scheduled Follow-Ups**: Automated background scheduler checks open reports and dispatches periodic follow-up status reminders.
+6. **Two-Way Citizen Resolution & Escalation**: Inbound webhook processes SMS/WhatsApp replies (`STATUS`, `FIXED`, `NOT_FIXED`, `HELP`), updating issue lifecycle states and triggering escalations.
 
 ---
 
@@ -21,6 +25,10 @@ Spring Boot Backend
     Port: 8080
     URL: http://localhost:8080
         │
+        ├── FollowUpScheduler (Automated backend follow-up tasks)
+        ├── InboundWebhookService (:8080/api/webhooks/messaging)
+        ├── MessagingService (Twilio / WhatsApp / Dev Mock Adapter)
+        │
         │ Forwarding /analyze & checking health
         ▼
 Python FastAPI AI Engine
@@ -35,8 +43,6 @@ Google Gemma 4 (gemma-4-26b-a4b-it)
 ---
 
 ## 2. Prerequisites
-
-Verify installed tools on Windows:
 
 - **Node.js**: v18+ (tested on Node v25.1.0) and **npm**
 - **Java**: Java 17 or Java 21 LTS (tested on Java 21.0.2)
@@ -59,39 +65,39 @@ Copy-Item .env.example .env
 cd c:\Users\aliba\Desktop\AIT\CivicEye\AI-engine
 Copy-Item .env.example .env
 ```
-Open `AI-engine/.env` and configure:
+Key settings in `AI-engine/.env`:
 ```env
 AI_HOST=127.0.0.1
 AI_PORT=8000
-GEMMA_API_KEY=your_actual_google_gemma_api_key_here
+GEMMA_API_KEY=your_google_gemma_api_key_here
 GEMMA_MODEL=gemma-4-26b-a4b-it
 DEMO_MODE_DEFAULT=false
 ```
-*Note: If you do not have an active Google Gemma 4 API key, leave `GEMMA_API_KEY` blank or enable Demo Mode in the web interface to test with deterministic simulated responses.*
 
-### C. Backend Configuration
-```powershell
-cd c:\Users\aliba\Desktop\AIT\CivicEye\backend
-Copy-Item .env.example .env
-```
+### C. Backend Configuration (`backend/src/main/resources/application.properties` or environment variables)
+```env
+# Messaging Provider: mock | twilio | whatsapp
+civiceye.messaging.provider=mock
+civiceye.messaging.test-recipient=+15551234567
 
-### D. Frontend Configuration
-```powershell
-cd c:\Users\aliba\Desktop\AIT\CivicEye\Frontend
-Copy-Item .env.example .env
+# Backend Follow-Up Scheduler (Minutes between follow-up checks)
+civiceye.follow-up.delay-minutes=2
+
+# Escalation Authority Phone Contact
+civiceye.escalation.recipient=+15559998888
 ```
 
 ---
 
-## 4. Running the Application (3 Independent Services)
+## 4. Running the Application (3 Services)
 
-Open three separate Windows PowerShell windows to launch the full stack:
+Open three separate Windows PowerShell windows:
 
 ### Terminal 1: Python AI Engine (Port 8000)
 ```powershell
 cd c:\Users\aliba\Desktop\AIT\CivicEye\AI-engine
 pip install -r requirements.txt
-uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 - Health Check: `GET http://127.0.0.1:8000/health`
 - Interactive Swagger UI: `http://127.0.0.1:8000/docs`
@@ -99,11 +105,12 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ### Terminal 2: Spring Boot Backend (Port 8080)
 ```powershell
 cd c:\Users\aliba\Desktop\AIT\CivicEye\backend
-mvn spring-boot:run
+mvn spring-boot:run "-Djava.net.preferIPv4Stack=true"
 ```
 - Health Check: `GET http://localhost:8080/api/health`
-- AI Status: `GET http://localhost:8080/api/ai/health`
+- AI Proxy Health: `GET http://localhost:8080/api/ai/health`
 - Report List: `GET http://localhost:8080/api/reports`
+- Webhook Simulate: `POST http://localhost:8080/api/webhooks/messaging/simulate`
 
 ### Terminal 3: React Frontend (Port 5173)
 ```powershell
@@ -115,53 +122,54 @@ Open your browser and navigate to: **`http://localhost:5173`**
 
 ---
 
-## 5. End-to-End Primary User Journey
+## 5. End-to-End User Flow (Stages A to J)
 
-1. **Dashboard & Status Check**:
-   - Open `http://localhost:5173`.
-   - Observe live status badges: "Backend Connected" (green) and "AI Engine Live / Demo Available".
-   - Notice real statistics calculated from the repository.
-2. **Report an Issue**:
-   - Click **"Report an Issue"** in the navigation bar.
-   - Drag and drop or select a civic issue photo (e.g., JPEG, PNG, or WebP).
-   - Enter an optional description (e.g. *"Large road depression causing sudden vehicular braking"*).
-   - Click **"Use Current GPS"** or type a manual landmark (e.g. *"MG Road near Metro Pillar 42"*).
-   - Toggle **"Demo Mode"** if testing without live Google Gemma 4 API keys.
-   - Click **"Analyze Issue with AI"**.
-3. **Review & Edit AI Analysis**:
-   - View detected category, preliminary severity with rationale, responsible department, and physical verification factors.
-   - Review and customize the editable complaint text draft.
-   - Click **"Save Report to My Reports"**.
-4. **Manage Reports in My Reports**:
-   - Search reports by keyword or filter by status (`Draft`, `Ready for Submission`, `Submitted`, `Resolved`).
-   - Click **"View Details"** to inspect full evidence.
-   - Click **"Edit Draft"** to update complaint text or lifecycle status.
-   - Delete test reports with confirmation.
+1. **Stage A — Animated Splash Screen**:
+   - Opens on fresh page load with subtle civic-tech styling (navy, white, teal accents).
+   - Automatically transitions to the dashboard after 1.8s (or immediate if `prefers-reduced-motion` is active).
+2. **Stage B — Home Dashboard**:
+   - Real statistics backed by repository records (Total Reports, Dispatched Messages, Escalated, Resolved).
+   - "Report an Issue" and "Track Issue" call-to-actions.
+   - Interactive 5-step civic accountability explanation.
+3. **Stage C — Report an Issue**:
+   - Upload file (JPEG, PNG, WebP up to 8 MB) or capture directly with device camera.
+   - Interactive OpenStreetMap (Leaflet) with draggable pin and automated Nominatim reverse geocoding to address.
+   - Test recipient phone configuration.
+4. **Stage D — Gemma 4 Vision Analysis**:
+   - Categorizes problem, computes preliminary severity rationale, assigns jurisdictional department, identifies verification factors, and creates editable complaint text.
+5. **Stage E — Dispatch Complaint**:
+   - Review draft and click "Send Complaint via WhatsApp / SMS".
+   - Confirmation dialog with destination phone and civic disclaimer.
+   - Sets communication status (`Sent` / `Delivered`) and returns provider message ID.
+6. **Stage F — Track Issue (`/track` & `/track/:id`)**:
+   - Search by Report ID.
+   - Shows lifecycle status vs messaging delivery status.
+   - Confirmed location map, complaint quote, delivery receipt, and follow-up schedule.
+7. **Stage G/I/J — Two-Way WhatsApp/SMS Bot & Reply Simulation**:
+   - Interactive reply simulator right on the Track Issue page!
+   - Test keywords:
+     - `STATUS <ID>`: Queries report status.
+     - `FIXED <ID>`: Confirms citizen resolution; stops follow-ups.
+     - `NOT_FIXED <ID>`: Triggers escalation workflow to higher authority.
+     - `HELP`: Shows bot commands.
+8. **Stage H — Automated Scheduled Follow-Ups**:
+   - Background Spring Boot scheduler (`@Scheduled`) periodically scans due reports and sends reminders.
 
 ---
 
-## 6. Demo Mode vs. Live AI Mode
+## 6. Running Automated Tests
 
-CivicEye includes an explicit **Demo Mode** ensuring the prototype is demonstrable under all conditions:
-- **Live AI Mode**: Calls the hosted Google Gemma 4 API via `https://generativelanguage.googleapis.com` using your `GEMMA_API_KEY`.
-- **Demo Mode**: Produces deterministic simulated municipal assessments based on image context without consuming API quota.
-- When Demo Mode is used, the UI prominently displays a blue **"Demo Mode — Simulated AI Response"** banner so users are never misled.
-
----
-
-## 7. Running Automated Tests
-
-### Backend Tests (Spring Boot + MockMvc)
+### Backend Unit & Integration Tests (13 tests)
 ```powershell
 cd c:\Users\aliba\Desktop\AIT\CivicEye\backend
 mvn test "-Djava.net.preferIPv4Stack=true"
 ```
 Verifies:
-- `GET /api/health` returns `200 OK` and `"UP"`.
-- `GET /api/ai/health` handles service connectivity.
-- `POST /api/reports/analyze` rejects empty uploads (`400`) and unsupported types (`415`).
-- `GET /api/reports` returns seeded reports.
-- `POST /api/reports` creates reports (`201`).
+- Report creation, listing, updating, and statistics.
+- File validation (rejecting empty images and non-image types).
+- Outgoing complaint dispatch via messaging adapter (`POST /api/reports/{id}/send`).
+- Inbound webhook keywords (`STATUS`, `FIXED`, `NOT_FIXED`, `HELP`).
+- Webhook deduplication and escalation triggers.
 
 ### AI Engine Tests (Pytest)
 ```powershell
@@ -169,34 +177,18 @@ cd c:\Users\aliba\Desktop\AIT\CivicEye\AI-engine
 pytest
 ```
 Verifies:
-- `GET /health` endpoint response and configuration flags.
-- Rejection of empty images (`400`) and non-image types (`415`).
-- Deterministic simulated responses in Demo Mode.
+- AI service health and config flags.
+- Image payload validation.
+- Deterministic simulation in Demo Mode.
 
 ---
 
-## 8. Troubleshooting & Tips
+## 7. Two-Way Webhook Verification
 
-- **Connection Reset / Maven download errors**:
-  If your ISP or router has IPv6 routing issues, add `-Djava.net.preferIPv4Stack=true` to your Maven command:
-  ```powershell
-  mvn clean test "-Djava.net.preferIPv4Stack=true"
-  ```
-- **Port Conflicts**:
-  If port `8080`, `8000`, or `5173` is occupied, change `PORT=8081` in `backend/.env` or `AI_PORT=8001` in `AI-engine/.env`.
-- **Gemma Model Not Found (404)**:
-  Verify your Google AI Studio account has access to `gemma-4-26b-a4b-it`. You can switch models in `AI-engine/.env` by editing `GEMMA_MODEL`.
+For live Meta WhatsApp Cloud API webhooks:
+- Webhook URL: `https://<YOUR_DOMAIN>/api/webhooks/messaging`
+- Verification Token: Configured in `civiceye.messaging.whatsapp.verify-token`.
 
----
-
-## 9. Known Limitations & Future Enhancements
-
-- **V1 Limitations**:
-  - In-memory thread-safe storage (reports survive process restart but do not persist across JVM shutdown).
-  - No user authentication or role-based access control.
-  - V1 prepares grievance drafts; it does not dispatch directly to government APIs.
-- **Planned V2 Roadmap**:
-  - Persistent PostgreSQL database via Spring Data JPA (see [`DATABASE_SCHEMA.md`](file:///c:/Users/aliba/Desktop/AIT/CivicEye/docs/DATABASE_SCHEMA.md)).
-  - Interactive Leaflet / OpenStreetMap GPS pin-drop coordinate selector.
-  - Citizen SMS/Email status notification gateway.
-  - Municipal Admin Portal for ward inspectors to update resolution status with after-repair photographs.
+For Twilio SMS webhooks:
+- In Twilio Console, configure your number's "A Message Comes In" Webhook to:
+  `https://<YOUR_DOMAIN>/api/webhooks/messaging` (HTTP POST).

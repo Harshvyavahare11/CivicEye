@@ -8,19 +8,26 @@ export function AnalysisCard({
   isSaving,
   initialLocation,
   initialDescription,
-  imagePreviewUrl
+  imagePreviewUrl,
+  initialRecipientPhone = '+15551234567',
+  latitude,
+  longitude
 }) {
   const [complaintText, setComplaintText] = useState(analysis.complaintText || '');
   const [title, setTitle] = useState(analysis.title || '');
   const [category, setCategory] = useState(analysis.category || 'Other');
   const [location, setLocation] = useState(initialLocation || '');
+  const [recipientPhone, setRecipientPhone] = useState(initialRecipientPhone);
+  const [showSendModal, setShowSendModal] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = (sendNow = false) => {
     onSaveReport({
       title,
       category,
       description: initialDescription,
       location,
+      latitude,
+      longitude,
       complaintText,
       severity: analysis.severity,
       severityReason: analysis.severityReason,
@@ -28,9 +35,11 @@ export function AnalysisCard({
       suggestedDepartment: analysis.suggestedDepartment || '',
       uncertainties: analysis.uncertainties || [],
       recommendedActions: analysis.recommendedActions || [],
-      status: 'Ready for Submission',
+      status: sendNow ? 'Sent' : 'Ready for Submission',
+      recipientPhone,
       demoMode: Boolean(analysis.demoMode),
-      imageUrl: imagePreviewUrl
+      imageUrl: imagePreviewUrl,
+      sendNow
     });
   };
 
@@ -73,7 +82,7 @@ export function AnalysisCard({
             {analysis.severityReason}
           </p>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-            * AI-generated preliminary assessment based on visual evidence, not an official municipal certification.
+            * AI-generated preliminary assessment based on visual evidence, requiring field verification.
           </div>
         </div>
 
@@ -85,7 +94,7 @@ export function AnalysisCard({
             {analysis.suggestedDepartment || 'Public Works Department'}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-            Recommended authority based on issue jurisdiction.
+            Recommended jurisdictional authority.
           </div>
         </div>
       </div>
@@ -136,7 +145,7 @@ export function AnalysisCard({
       <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1.5rem', marginTop: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
           <label className="form-label" style={{ fontSize: '1rem', margin: 0 }}>
-            Generated Complaint Draft (Review & Edit Before Saving)
+            Generated Complaint Draft (Review &amp; Edit Before Sending)
           </label>
           <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Editable by Citizen</span>
         </div>
@@ -172,17 +181,88 @@ export function AnalysisCard({
           </div>
         </div>
 
+        <div className="form-group" style={{ marginTop: '1rem' }}>
+          <label className="form-label" style={{ fontSize: '0.8125rem' }}>Dispatch Recipient Phone (SMS / WhatsApp)</label>
+          <input
+            type="text"
+            className="form-input"
+            value={recipientPhone}
+            onChange={(e) => setRecipientPhone(e.target.value)}
+            placeholder="+15551234567"
+          />
+        </div>
+
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem' }}>
           <button
             type="button"
-            className="btn btn-primary"
-            onClick={handleSave}
+            className="btn btn-outline"
+            onClick={() => handleSave(false)}
             disabled={isSaving || !complaintText.trim()}
           >
-            {isSaving ? 'Saving to CivicEye...' : '💾 Save Report to My Reports'}
+            {isSaving ? 'Saving...' : '💾 Save as Draft'}
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setShowSendModal(true)}
+            disabled={isSaving || !complaintText.trim()}
+          >
+            🚀 Send Complaint via WhatsApp / SMS
           </button>
         </div>
       </div>
+
+      {/* Confirmation Dialog Modal */}
+      {showSendModal && (
+        <div className="modal-backdrop">
+          <div className="modal-card">
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '0.75rem', color: 'var(--text-primary)' }}>
+              Confirm Outgoing Complaint Dispatch
+            </h3>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+              CivicEye will dispatch this grievance to your configured recipient via the active messaging adapter.
+            </p>
+
+            <div style={{ backgroundColor: 'var(--bg-main)', padding: '0.875rem', borderRadius: 'var(--radius-sm)', marginBottom: '1rem', fontSize: '0.875rem' }}>
+              <div><strong>Recipient Number:</strong> <code>{recipientPhone}</code></div>
+              <div><strong>Assigned Department:</strong> {analysis.suggestedDepartment || 'Public Works'}</div>
+              <div style={{ marginTop: '0.5rem' }}>
+                <strong>Message Content:</strong>
+                <blockquote style={{ fontStyle: 'italic', margin: '0.25rem 0 0', borderLeft: '3px solid var(--teal-500)', paddingLeft: '0.5rem', color: 'var(--text-secondary)' }}>
+                  "{complaintText}"
+                </blockquote>
+              </div>
+            </div>
+
+            <div style={{ fontSize: '0.75rem', color: '#b45309', backgroundColor: '#fef3c7', padding: '0.65rem', borderRadius: '4px', marginBottom: '1.25rem' }}>
+              ⚠️ <strong>Civic Disclaimer:</strong> Dispatching an SMS or WhatsApp notification does not represent an official municipal acknowledgment until formally accepted by authorities.
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => setShowSendModal(false)}
+                disabled={isSaving}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  setShowSendModal(false);
+                  handleSave(true);
+                }}
+                disabled={isSaving}
+              >
+                {isSaving ? 'Dispatching...' : 'Yes, Dispatch Grievance'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

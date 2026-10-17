@@ -83,4 +83,97 @@ class ReportControllerTest {
                 .andExpect(jsonPath("$.title").value("Broken street lamp near school"))
                 .andExpect(jsonPath("$.category").value("Streetlight"));
     }
+
+    @Test
+    void sendComplaintShouldDeliverViaMessagingAdapter() throws Exception {
+        String sendBody = """
+                {
+                    "recipientPhone": "+15559876543",
+                    "customNote": "Testing automated complaint dispatch"
+                }
+                """;
+
+        mockMvc.perform(post("/api/reports/CE-2026-1002/send")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(sendBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reportId").value("CE-2026-1002"))
+                .andExpect(jsonPath("$.status").value("SENT"))
+                .andExpect(jsonPath("$.communicationStatus").value(org.hamcrest.Matchers.anyOf(
+                        org.hamcrest.Matchers.is("Sent"),
+                        org.hamcrest.Matchers.is("Delivered")
+                )))
+                .andExpect(jsonPath("$.providerMessageId").isNotEmpty());
+    }
+
+    @Test
+    void simulateInboundWebhookStatusKeyword() throws Exception {
+        String simJson = """
+                {
+                    "from": "+15551234567",
+                    "body": "STATUS CE-2026-1001"
+                }
+                """;
+
+        mockMvc.perform(post("/api/webhooks/messaging/simulate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(simJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reportId").value("CE-2026-1001"))
+                .andExpect(jsonPath("$.action").value("STATUS_QUERY"))
+                .andExpect(jsonPath("$.replyText").value(org.hamcrest.Matchers.containsString("CivicEye Report Status")));
+    }
+
+    @Test
+    void simulateInboundWebhookFixedKeywordResolvesReport() throws Exception {
+        String simJson = """
+                {
+                    "from": "+15551234567",
+                    "body": "FIXED CE-2026-1001"
+                }
+                """;
+
+        mockMvc.perform(post("/api/webhooks/messaging/simulate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(simJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reportId").value("CE-2026-1001"))
+                .andExpect(jsonPath("$.action").value("MARKED_FIXED"))
+                .andExpect(jsonPath("$.newStatus").value("Awaiting Citizen Confirmation"));
+    }
+
+    @Test
+    void simulateInboundWebhookNotFixedKeywordEscalatesReport() throws Exception {
+        String simJson = """
+                {
+                    "from": "+15551234567",
+                    "body": "NOT_FIXED CE-2026-1001"
+                }
+                """;
+
+        mockMvc.perform(post("/api/webhooks/messaging/simulate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(simJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reportId").value("CE-2026-1001"))
+                .andExpect(jsonPath("$.action").value("ESCALATED"))
+                .andExpect(jsonPath("$.newStatus").value("Escalated"));
+    }
+
+    @Test
+    void simulateInboundWebhookHelpKeyword() throws Exception {
+        String simJson = """
+                {
+                    "from": "+15551234567",
+                    "body": "HELP"
+                }
+                """;
+
+        mockMvc.perform(post("/api/webhooks/messaging/simulate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(simJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.action").value("HELP"))
+                .andExpect(jsonPath("$.replyText").value(org.hamcrest.Matchers.containsString("CivicEye SMS/WhatsApp Bot Commands")));
+    }
 }

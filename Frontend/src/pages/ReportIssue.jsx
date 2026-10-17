@@ -4,7 +4,7 @@ import ReportForm from '../components/reports/ReportForm';
 import AnalysisCard from '../components/reports/AnalysisCard';
 import Alert from '../components/common/Alert';
 import { analyzeIssue } from '../services/aiService';
-import { createReport } from '../services/reportService';
+import { createReport, sendComplaint } from '../services/reportService';
 
 export function ReportIssue({ backendHealth, aiHealth }) {
   const navigate = useNavigate();
@@ -20,13 +20,13 @@ export function ReportIssue({ backendHealth, aiHealth }) {
   // Auto-suggest demo mode if AI Engine is not configured with live Gemma key
   const defaultDemo = Boolean(aiHealth && !aiHealth.gemmaKeyConfigured);
 
-  const handleAnalyze = async ({ file, previewUrl, description, location, demoMode }) => {
+  const handleAnalyze = async ({ file, previewUrl, description, location, latitude, longitude, recipientPhone, demoMode }) => {
     setIsAnalyzing(true);
     setError(null);
     setAnalysisResult(null);
     setSaveSuccess(null);
 
-    setLastSubmissionParams({ file, previewUrl, description, location, demoMode });
+    setLastSubmissionParams({ file, previewUrl, description, location, latitude, longitude, recipientPhone, demoMode });
 
     try {
       const result = await analyzeIssue(file, description, location, demoMode);
@@ -34,7 +34,10 @@ export function ReportIssue({ backendHealth, aiHealth }) {
         ...result,
         previewUrl,
         initialDescription: description,
-        initialLocation: location
+        initialLocation: location,
+        latitude,
+        longitude,
+        recipientPhone
       });
     } catch (err) {
       setError(err.message || 'Analysis request failed.');
@@ -54,10 +57,25 @@ export function ReportIssue({ backendHealth, aiHealth }) {
     setError(null);
     try {
       const saved = await createReport(reportData);
-      setSaveSuccess(`Report ${saved.id} saved successfully! Redirecting to My Reports...`);
-      setTimeout(() => {
-        navigate('/reports');
-      }, 1500);
+
+      if (reportData.sendNow) {
+        setSaveSuccess(`Grievance saved as ${saved.id}. Dispatching complaint to ${reportData.recipientPhone || 'recipient'}...`);
+        try {
+          const sendRes = await sendComplaint(saved.id, reportData.recipientPhone);
+          const simNote = sendRes.simulated ? ' (Simulated in Development Mode)' : '';
+          setSaveSuccess(`Complaint dispatched successfully${simNote}! Opening real-time tracking...`);
+        } catch (sendErr) {
+          console.warn('Dispatch error after save:', sendErr);
+        }
+        setTimeout(() => {
+          navigate(`/track/${saved.id}`);
+        }, 1200);
+      } else {
+        setSaveSuccess(`Report ${saved.id} saved as draft! Redirecting to My Reports...`);
+        setTimeout(() => {
+          navigate('/reports');
+        }, 1200);
+      }
     } catch (err) {
       setError(`Failed to save report: ${err.message}`);
       setIsSaving(false);
@@ -71,7 +89,7 @@ export function ReportIssue({ backendHealth, aiHealth }) {
           Report a Civic Grievance
         </h1>
         <p style={{ color: 'var(--text-secondary)' }}>
-          Upload a visible issue photograph. Google Gemma 4 will detect the problem, assess preliminary severity, identify the responsible department, and draft a verified complaint.
+          Upload a visible issue photograph. Google Gemma 4 will detect the problem, assess preliminary severity, identify the responsible department, and draft an editable complaint.
         </p>
       </div>
 
@@ -103,6 +121,9 @@ export function ReportIssue({ backendHealth, aiHealth }) {
           initialLocation={analysisResult.initialLocation}
           initialDescription={analysisResult.initialDescription}
           imagePreviewUrl={analysisResult.previewUrl}
+          initialRecipientPhone={analysisResult.recipientPhone}
+          latitude={analysisResult.latitude}
+          longitude={analysisResult.longitude}
         />
       )}
     </div>

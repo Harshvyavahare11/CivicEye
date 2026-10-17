@@ -1,18 +1,21 @@
 import React, { useState, useRef } from 'react';
 import { validateImageFile, formatFileSize } from '../../utils/validators';
 import Alert from '../common/Alert';
+import LocationMap from '../common/LocationMap';
 
 export function ReportForm({ onAnalyze, isAnalyzing, error, onRetry, defaultDemoMode = false }) {
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
+  const [latitude, setLatitude] = useState(18.5204);
+  const [longitude, setLongitude] = useState(73.8567);
+  const [recipientPhone, setRecipientPhone] = useState('+15551234567');
   const [demoMode, setDemoMode] = useState(defaultDemoMode);
   const [validationError, setValidationError] = useState(null);
-  const [isGettingLocation, setIsGettingLocation] = useState(false);
-  const [geoPrompt, setGeoPrompt] = useState(null);
 
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
 
   const handleFileSelect = (selectedFile) => {
     setValidationError(null);
@@ -49,36 +52,14 @@ export function ReportForm({ onAnalyze, isAnalyzing, error, onRetry, defaultDemo
     }
     setPreviewUrl(null);
     setValidationError(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
   };
 
-  const handleGetLocation = () => {
-    if (!navigator.geolocation) {
-      setValidationError('Geolocation is not supported by your browser.');
-      return;
-    }
-
-    setGeoPrompt('CivicEye is requesting permission to access your GPS coordinates...');
-    setIsGettingLocation(true);
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude.toFixed(5);
-        const lng = pos.coords.longitude.toFixed(5);
-        const geoText = `Lat: ${lat}, Long: ${lng}`;
-        setLocation(geoText);
-        setGeoPrompt(null);
-        setIsGettingLocation(false);
-      },
-      (err) => {
-        setGeoPrompt(null);
-        setIsGettingLocation(false);
-        setValidationError(`Location permission denied or unavailable (${err.message}). You may type the location manually.`);
-      },
-      { timeout: 10000 }
-    );
+  const handleLocationChange = ({ latitude: lat, longitude: lng, address }) => {
+    setLatitude(lat);
+    setLongitude(lng);
+    setLocation(address);
   };
 
   const handleSubmit = (e) => {
@@ -93,6 +74,9 @@ export function ReportForm({ onAnalyze, isAnalyzing, error, onRetry, defaultDemo
       previewUrl,
       description,
       location,
+      latitude,
+      longitude,
+      recipientPhone,
       demoMode
     });
   };
@@ -128,38 +112,59 @@ export function ReportForm({ onAnalyze, isAnalyzing, error, onRetry, defaultDemo
                 if (onRetry) onRetry();
               }}
             >
-              🧪 Switch to Demo Mode & Retry
+              🧪 Switch to Demo Mode &amp; Retry
             </button>
           </div>
         </div>
       )}
 
-      {/* 1. Image Upload Control */}
+      {/* 1. Image Upload & Camera Control */}
       <div className="form-group">
         <label className="form-label">
           Civic Issue Photograph <span style={{ color: '#ef4444' }}>*</span>
         </label>
 
         {!previewUrl ? (
-          <div
-            className="dropzone"
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept="image/jpeg,image/png,image/webp"
-              style={{ display: 'none' }}
-            />
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📷</div>
-            <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-              Click to upload photo, or drag and drop
+          <div>
+            <div
+              className="dropzone"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/jpeg,image/png,image/webp"
+                style={{ display: 'none' }}
+              />
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📸</div>
+              <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
+                Click to upload file, or drag and drop
+              </div>
+              <div className="form-help">
+                Supports JPEG, PNG, and WebP (up to 8 MB)
+              </div>
             </div>
-            <div className="form-help">
-              Supports JPEG, PNG, and WebP (up to 8 MB)
+
+            {/* Device Camera Input */}
+            <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'center' }}>
+              <input
+                type="file"
+                ref={cameraInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                capture="environment"
+                style={{ display: 'none' }}
+              />
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => cameraInputRef.current?.click()}
+              >
+                📷 Take Photo with Camera
+              </button>
             </div>
           </div>
         ) : (
@@ -220,52 +225,54 @@ export function ReportForm({ onAnalyze, isAnalyzing, error, onRetry, defaultDemo
         </div>
       </div>
 
-      {/* 3. Location Input */}
+      {/* 3. Interactive Location Map & Address */}
       <div className="form-group">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.375rem' }}>
-          <label className="form-label" htmlFor="location" style={{ margin: 0 }}>
-            Location & Landmark (Citizen Confirmed)
-          </label>
-          <button
-            type="button"
-            onClick={handleGetLocation}
-            disabled={isGettingLocation}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--teal-600)',
-              fontSize: '0.8125rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.25rem'
-            }}
-          >
-            📍 {isGettingLocation ? 'Detecting GPS...' : 'Use Current GPS'}
-          </button>
-        </div>
-
-        {geoPrompt && (
-          <div style={{ fontSize: '0.8125rem', color: 'var(--teal-700)', marginBottom: '0.5rem' }}>
-            {geoPrompt}
-          </div>
-        )}
-
-        <input
-          id="location"
-          type="text"
-          className="form-input"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          placeholder="e.g. Near Nal Stop, Karve Road, Pune (or landmark/crossroad)"
+        <label className="form-label">
+          Civic Location &amp; Coordinates (OpenStreetMap)
+        </label>
+        <LocationMap
+          latitude={latitude}
+          longitude={longitude}
+          address={location}
+          onLocationChange={handleLocationChange}
+          readOnly={false}
+          height="240px"
         />
-        <div className="form-help">
-          We do not guess or fabricate addresses. Please verify or type the landmark yourself.
+
+        <div style={{ marginTop: '0.75rem' }}>
+          <label className="form-label" htmlFor="manual-location" style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+            Location Landmark / Address (editable):
+          </label>
+          <input
+            id="manual-location"
+            type="text"
+            className="form-input"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="e.g. Near Metro Pillar 42, MG Road, Pune"
+          />
         </div>
       </div>
 
-      {/* 4. Demo Mode Toggle */}
+      {/* 4. Recipient Phone Contact */}
+      <div className="form-group">
+        <label className="form-label" htmlFor="recipient-phone">
+          Test Recipient Phone (SMS / WhatsApp Dispatch)
+        </label>
+        <input
+          id="recipient-phone"
+          type="text"
+          className="form-input"
+          value={recipientPhone}
+          onChange={(e) => setRecipientPhone(e.target.value)}
+          placeholder="+15551234567 or +919876543210"
+        />
+        <div className="form-help">
+          For prototype demonstration, complaints will be dispatched to this test recipient number.
+        </div>
+      </div>
+
+      {/* 5. Demo Mode Toggle */}
       <div style={{
         backgroundColor: 'var(--bg-main)',
         padding: '0.875rem 1rem',
@@ -292,7 +299,7 @@ export function ReportForm({ onAnalyze, isAnalyzing, error, onRetry, defaultDemo
         />
       </div>
 
-      {/* 5. Submit Button */}
+      {/* 6. Submit Button */}
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <button
           type="submit"
