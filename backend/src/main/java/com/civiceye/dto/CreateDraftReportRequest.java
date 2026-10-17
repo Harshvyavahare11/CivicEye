@@ -25,8 +25,29 @@ public record CreateDraftReportRequest(
         BigDecimal longitude,
 
         String suggestedDepartment,
-        String recipientPhone
+        String recipientPhone,
+        Boolean smsConsent
 ) {
+    public CreateDraftReportRequest(
+            String title,
+            String description,
+            String complaintText,
+            String category,
+            String severity,
+            String locationText,
+            String location,
+            BigDecimal latitude,
+            BigDecimal longitude,
+            String suggestedDepartment,
+            String recipientPhone
+    ) {
+        this(title, description, complaintText, category, severity, locationText, location, latitude, longitude, suggestedDepartment, recipientPhone, false);
+    }
+
+    public boolean effectiveSmsConsent() {
+        return Boolean.TRUE.equals(smsConsent);
+    }
+
     public String effectiveDescription() {
         if (description != null && !description.isBlank()) return description.trim();
         if (complaintText != null && !complaintText.isBlank()) return complaintText.trim();

@@ -29,19 +29,22 @@ public class CivicReportService {
     private final AiAnalysisRepository analysisRepository;
     private final ReportStatusHistoryRepository statusHistoryRepository;
     private final StorageService storageService;
+    private final com.civiceye.service.notification.NotificationCoordinator notificationCoordinator;
 
     public CivicReportService(
             CivicReportRepository reportRepository,
             ReportEvidenceRepository evidenceRepository,
             AiAnalysisRepository analysisRepository,
             ReportStatusHistoryRepository statusHistoryRepository,
-            StorageService storageService
+            StorageService storageService,
+            com.civiceye.service.notification.NotificationCoordinator notificationCoordinator
     ) {
         this.reportRepository = reportRepository;
         this.evidenceRepository = evidenceRepository;
         this.analysisRepository = analysisRepository;
         this.statusHistoryRepository = statusHistoryRepository;
         this.storageService = storageService;
+        this.notificationCoordinator = notificationCoordinator;
     }
 
     /**
@@ -63,6 +66,7 @@ public class CivicReportService {
         report.setLongitude(req.longitude());
         report.setSuggestedDepartment(req.suggestedDepartment() != null ? req.suggestedDepartment().trim() : null);
         report.setRecipientPhone(req.recipientPhone() != null ? req.recipientPhone().trim() : null);
+        report.setSmsConsent(req.effectiveSmsConsent());
         report.setCommunicationStatus("Draft");
 
         CivicReport savedReport = reportRepository.save(report);
@@ -229,6 +233,17 @@ public class CivicReportService {
         saved.getStatusHistory().add(0, history);
 
         log.info("Report {} status changed: {} -> {}", saved.getReportNumber(), currentStatus, targetStatus);
+
+        // Dispatch notifications safely
+        if (targetStatus == ReportStatus.SUBMITTED) {
+            notificationCoordinator.notifySubmission(saved);
+        } else {
+            notificationCoordinator.notifyStatusChange(saved, currentStatus, targetStatus);
+        }
+        if (targetStatus == ReportStatus.ACKNOWLEDGED && saved.getSuggestedDepartment() != null && !saved.getSuggestedDepartment().isBlank()) {
+            notificationCoordinator.notifyAssignment(saved, saved.getSuggestedDepartment());
+        }
+
         return ReportResponse.fromEntity(saved);
     }
 

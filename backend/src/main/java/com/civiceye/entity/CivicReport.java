@@ -52,6 +52,9 @@ public class CivicReport {
     @Column(name = "recipient_phone", length = 50)
     private String recipientPhone;
 
+    @Column(name = "sms_consent", nullable = false)
+    private boolean smsConsent = false;
+
     @Column(name = "communication_status", length = 50)
     private String communicationStatus = "Draft";
 
@@ -217,6 +220,14 @@ public class CivicReport {
 
     public void setRecipientPhone(String recipientPhone) {
         this.recipientPhone = recipientPhone;
+    }
+
+    public boolean isSmsConsent() {
+        return smsConsent;
+    }
+
+    public void setSmsConsent(boolean smsConsent) {
+        this.smsConsent = smsConsent;
     }
 
     public String getCommunicationStatus() {

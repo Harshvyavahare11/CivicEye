@@ -159,7 +159,7 @@ Open your browser and navigate to: **`http://localhost:5173`**
 
 ## 6. Running Automated Tests
 
-### Backend Unit & Integration Tests (13 tests)
+### Backend Unit & Integration Tests (33 tests)
 ```powershell
 cd c:\Users\aliba\Desktop\AIT\CivicEye\backend
 mvn test "-Djava.net.preferIPv4Stack=true"
@@ -170,6 +170,84 @@ Verifies:
 - Outgoing complaint dispatch via messaging adapter (`POST /api/reports/{id}/send`).
 - Inbound webhook keywords (`STATUS`, `FIXED`, `NOT_FIXED`, `HELP`).
 - Webhook deduplication and escalation triggers.
+- **Twilio SMS Notifications Suite (`TwilioNotificationTest`, 12 tests)**:
+  - Default mock mode functionality without credentials.
+  - Safe error handling when Twilio credentials are missing.
+  - Proper payload construction (E.164 recipient, sender, concise body).
+  - Provider response handling and message acceptance tracking.
+  - Safe handling of authentication errors and API failure codes.
+  - Transactional isolation: notification failure does not rollback complaints.
+  - Idempotency and deduplication via `notification_logs`.
+  - Complainant SMS consent enforcement.
+  - Controlled test-recipient and escalation-recipient routing.
+  - Follow-up scheduling delays and valid lifecycle status updates.
+
+---
+
+## 7. Twilio SMS Notifications Setup & Developer Guide
+
+### A. Modes of Operation
+CivicEye supports two primary messaging modes controlled by `CIVICEYE_MESSAGING_PROVIDER` in `.env`:
+
+1. **Mock Mode (`mock`, Default)**:
+   - Does not require any Twilio credentials.
+   - All outgoing SMS notifications (submissions, assignments, status updates, follow-ups, and escalations) are logged directly to the backend console.
+   - Safe for CI/CD pipelines, hackathon demonstrations, and offline development.
+
+2. **Twilio Mode (`twilio`)**:
+   - Uses the official Twilio Programmable Messaging API (`https://api.twilio.com/2010-04-01/Accounts/{AccountSid}/Messages.json`).
+   - Requires `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_PHONE`.
+
+### B. Configuring Twilio Credentials
+In your local `.env` file (which is git-ignored):
+```properties
+CIVICEYE_MESSAGING_PROVIDER=twilio
+CIVICEYE_TEST_RECIPIENT=+917058207967
+
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_FROM_PHONE=+17372508034
+
+CIVICEYE_FOLLOW_UP_DELAY_MINUTES=2
+CIVICEYE_ESCALATION_RECIPIENT=+917058207967
+```
+
+### C. Twilio Console Walkthrough
+1. **Sign Up / Log In**: Visit [https://console.twilio.com/](https://console.twilio.com/).
+2. **Account SID & Auth Token**: Found directly on the dashboard home under "Account Info".
+3. **Obtain an SMS Sender Number**:
+   - Navigate to **Phone Numbers** -> **Manage** -> **Active Numbers** (or **Buy a number**).
+   - Ensure the purchased number has "SMS" capabilities enabled.
+   - Copy the number in E.164 format (e.g. `+17372508034`) to `TWILIO_FROM_PHONE`.
+4. **Trial Account Verification**:
+   - If using a Twilio Trial account, SMS can **only** be sent to phone numbers that have been verified.
+   - Navigate to **Phone Numbers** -> **Manage** -> **Verified Caller IDs**.
+   - Add and verify your personal test mobile number (e.g. `+917058207967`).
+   - Set this number as `CIVICEYE_TEST_RECIPIENT` and `CIVICEYE_ESCALATION_RECIPIENT`.
+
+### D. Safe Controlled Testing Instructions
+To send a single controlled test message using curl:
+```bash
+curl -X POST "https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "To=%2B917058207967" \
+  -d "From=%2B17372508034" \
+  -d "Body=CivicEye+Test+Notification:+Issue+CE-2026-0001+recorded" \
+  -u "${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}"
+```
+
+### E. Notification Audit Trail & Troubleshooting
+All notification attempts are saved in the `notification_logs` PostgreSQL table:
+- **`idempotency_key`**: Prevents duplicate SMS messages for the same report event.
+- **`recipient_masked`**: Masks phone numbers (e.g. `+91****207967`) in database logs to protect user privacy.
+- **`outcome`**: `ACCEPTED`, `SIMULATED`, or `FAILED`.
+- **Common Error Codes**:
+  - `TWILIO_ERR_20003`: Invalid Account SID or Auth Token.
+  - `TWILIO_ERR_21608`: Unverified recipient phone number on a Twilio trial account.
+  - `TWILIO_ERR_21211`: Invalid phone number format (must follow E.164 format `+[country][number]`).
+  - `TWILIO_ERR_429`: Rate limit exceeded.
+
+---
 
 ### AI Engine Tests (Pytest)
 ```powershell

@@ -58,6 +58,13 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
+        <!-- Dotenv for local environment loading -->
+        <dependency>
+            <groupId>io.github.cdimascio</groupId>
+            <artifactId>dotenv-java</artifactId>
+            <version>3.0.0</version>
+        </dependency>
+
         <!-- In-memory H2 Database for fast isolated automated tests -->
         <dependency>
             <groupId>com.h2database</groupId>
