@@ -3,6 +3,8 @@ package com.civiceye.entity;
 import com.civiceye.entity.converter.JsonListConverter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,25 +30,26 @@ public class AiAnalysis {
     @Column(name = "prompt_version", nullable = false, length = 50)
     private String promptVersion = "v1.0";
 
-    @Convert(converter = JsonListConverter.class)
-    @Column(name = "observations", nullable = false, columnDefinition = "TEXT")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "observations", columnDefinition = "jsonb")
     private List<String> observations = new ArrayList<>();
 
     @Column(name = "severity_reason", columnDefinition = "TEXT")
     private String severityReason;
 
-    @Convert(converter = JsonListConverter.class)
-    @Column(name = "uncertainties", columnDefinition = "TEXT")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "uncertainties", columnDefinition = "jsonb")
     private List<String> uncertainties = new ArrayList<>();
 
     @Column(name = "suggested_department")
     private String suggestedDepartment;
 
-    @Convert(converter = JsonListConverter.class)
-    @Column(name = "next_steps", columnDefinition = "TEXT")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "next_steps", columnDefinition = "jsonb")
     private List<String> nextSteps = new ArrayList<>();
 
-    @Column(name = "raw_response", columnDefinition = "TEXT")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "raw_response", columnDefinition = "jsonb")
     private String rawResponse;
 
     @Column(name = "created_at", nullable = false, updatable = false)
